@@ -22,7 +22,7 @@ public class OutboxProcessorService(
         {
             try
             {
-                await ProcessOutboxMessagesAsync2(stoppingToken);
+                await ProcessOutboxMessagesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
@@ -34,7 +34,7 @@ public class OutboxProcessorService(
         }
     }
 
-    private async Task ProcessOutboxMessagesAsync(CancellationToken cancellationToken)
+    private async Task ProcessOutboxMessagesAsyncWithoutOutbox(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -68,11 +68,13 @@ public class OutboxProcessorService(
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task ProcessOutboxMessagesAsync2(CancellationToken cancellationToken)
+    private async Task ProcessOutboxMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var messageBroker = scope.ServiceProvider.GetRequiredService<IMessageBroker>();
+        var hubNotifier = scope.ServiceProvider.GetRequiredService<IChatHubNotifier>();
+
 
         // Pega só os que ainda não foram publicados no RabbitMQ
         var messages = await context.OutboxMessages
@@ -105,6 +107,18 @@ public class OutboxProcessorService(
                 message.RetryCount++;
                 message.Error = ex.Message;
                 logger.LogWarning(ex, "Failed to publish outbox message {Id}.", message.Id);
+
+                if (message.RetryCount >= 3)
+                {
+                    var stockQuery = JsonConvert.DeserializeObject<StockQueryMessage>(message.Content)!;
+                    await hubNotifier.NotifyMessageAsync(stockQuery.ChatRoomId, new MessageNotification(
+                        Guid.Empty,
+                        stockQuery.ChatRoomId,
+                        $"Could not process stock quote. Please try again later.",
+                        "StockBot",
+                        true,
+                        DateTime.UtcNow), cancellationToken);
+                }
             }
         }
 

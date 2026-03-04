@@ -83,6 +83,13 @@ public class StockBotConsumer(
             catch (Exception ex)
             {
                 retryCount++;
+
+                if (retryCount >= maxRetries)
+                {
+                    logger.LogError("Could not connect to RabbitMQ after {Max} attempts. Giving up.", maxRetries);
+                    return;
+                }
+
                 logger.LogWarning("Tentativa {Retry}/{Max} falhou: {Error}", retryCount, maxRetries, ex.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }

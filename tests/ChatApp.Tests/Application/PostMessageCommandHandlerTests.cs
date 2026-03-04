@@ -2,10 +2,11 @@ using ChatApp.Application.Interfaces;
 using ChatApp.Application.Messages.Commands;
 using ChatApp.Domain.Entities;
 using ChatApp.Domain.Interfaces;
+using ChatApp.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Tests.Application;
 
@@ -13,6 +14,7 @@ public class PostMessageCommandHandlerTests
 {
     private readonly Mock<IChatRoomRepository> _chatRoomRepoMock = new();
     private readonly Mock<IMessageRepository> _messageRepositoryMock = new();
+    private readonly Mock<IOutboxMessageRepository> _outboxMessageRepositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IMessageBroker> _messageBrokerMock = new();
     private readonly Mock<IChatHubNotifier> _hubNotifierMock = new();
@@ -22,7 +24,7 @@ public class PostMessageCommandHandlerTests
         _chatRoomRepoMock.Object,
         _messageRepositoryMock.Object,
         _unitOfWorkMock.Object,
-        _messageBrokerMock.Object,
+        _outboxMessageRepositoryMock.Object,
         _hubNotifierMock.Object,
         _loggerMock.Object);
 

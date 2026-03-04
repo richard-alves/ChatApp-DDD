@@ -64,14 +64,32 @@ public class PostMessageCommandHandler(
             //    new StockQueryMessage(stockCode, request.ChatRoomId),
             //    cancellationToken);
 
-            await outboxMessageRepository.AddAsync(
-                "StockQuery",
-                JsonConvert.SerializeObject(new StockQueryMessage(stockCode, request.ChatRoomId)),
-                cancellationToken);
+            try
+            {
+                await outboxMessageRepository.AddAsync(
+                    "StockQuery",
+                    JsonConvert.SerializeObject(new StockQueryMessage(stockCode, request.ChatRoomId)),
+                    cancellationToken);
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to queue stock query for {StockCode}", stockCode);
 
-            var notification = new MessageNotification(
+                // Avisa o usuário que algo deu errado
+                var errorNotification = new MessageNotification(
+                    Guid.Empty,
+                    request.ChatRoomId,
+                    $"Could not process stock quote for {stockCode.ToUpper()}. Please try again later.",
+                    "StockBot",
+                    true,
+                    DateTime.UtcNow);
+
+                await hubNotifier.NotifyMessageAsync(request.ChatRoomId, errorNotification, cancellationToken);
+            }
+
+        var notification = new MessageNotification(
                 Guid.Empty,
                 request.ChatRoomId,
                 $"Fetching quote for {stockCode.ToUpper()}, please wait...",

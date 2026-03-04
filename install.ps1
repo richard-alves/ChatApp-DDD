@@ -4,13 +4,14 @@ Write-Host "=== ChatApp Installer ===" -ForegroundColor Cyan
 
 # 1. Verifica .NET 8
 Write-Host "`nChecking .NET 8..." -ForegroundColor Yellow
-$dotnet = dotnet --version 2>$null
-if (-not $dotnet -or -not $dotnet.StartsWith("8.")) {
-    Write-Host "NET 8 not found. Download at: https://dotnet.microsoft.com/download/dotnet/8.0" -ForegroundColor Red
+$sdks = dotnet --list-sdks 2>$null
+$hasNet8 = $sdks | Where-Object { $_ -match "^8\." }
+if (-not $hasNet8) {
+    Write-Host ".NET 8 SDK not found. Download at: https://dotnet.microsoft.com/download/dotnet/8.0" -ForegroundColor Red
     Start-Process "https://dotnet.microsoft.com/download/dotnet/8.0"
     exit 1
 }
-Write-Host ".NET $dotnet found." -ForegroundColor Green
+Write-Host ".NET 8 SDK found." -ForegroundColor Green
 
 # 2. Verifica Docker
 Write-Host "`nChecking Docker..." -ForegroundColor Yellow
