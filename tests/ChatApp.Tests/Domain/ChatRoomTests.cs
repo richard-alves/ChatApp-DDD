@@ -53,7 +53,28 @@ public class ChatRoomTests
         var evt = room.DomainEvents.OfType<ChatRoomCreatedEvent>().First();
         evt.ChatRoomId.Should().Be(room.Id);
         evt.Name.Should().Be("General");
-    } 
+    }
+
+    [Fact]
+    public void Create_ShouldTrimName()
+    {
+        var room = ChatRoom.Create("  General  ");
+        room.Name.Should().Be("General");
+    }
+
+    [Fact]
+    public void Create_WithDescription_ShouldSetDescription()
+    {
+        var room = ChatRoom.Create("General", "General discussion");
+        room.Description.Should().Be("General discussion");
+    }
+
+    [Fact]
+    public void Create_ShouldBeActiveByDefault()
+    {
+        var room = ChatRoom.Create("General");
+        room.IsActive.Should().BeTrue();
+    }
 }
 
 public class MessageTests
@@ -160,5 +181,19 @@ public class MessageTests
         message.IsBot.Should().BeTrue();
         message.Username.Should().Be("StockBot");
         message.UserId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_ShouldTrimContent()
+    {
+        var message = Message.Create("  Hello  ", "user-1", "Alice", Guid.NewGuid());
+        message.Content.Should().Be("Hello");
+    }
+
+    [Fact]
+    public void CreateBotMessage_WithEmptyContent_ShouldThrowDomainException()
+    {
+        var act = () => Message.CreateBotMessage("", "StockBot", Guid.NewGuid());
+        act.Should().Throw<DomainException>();
     }
 }

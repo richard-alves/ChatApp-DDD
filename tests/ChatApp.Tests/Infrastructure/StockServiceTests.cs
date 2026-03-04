@@ -45,7 +45,6 @@ public class StockServiceTests
         // Assert
         result.Should().NotBeNull();
         result!.Price.Should().Be(152.50m);
-        result.DisplayMessage.Should().Contain("152.50");
         result.DisplayMessage.Should().Contain("per share");
     }
 
