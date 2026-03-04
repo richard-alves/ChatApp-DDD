@@ -39,7 +39,6 @@ public class StockBotConsumer(
             _connection?.Close();
         });
 
-        // Keep running
         //while (!stoppingToken.IsCancellationRequested)
         //    await Task.Delay(1000, stoppingToken).ContinueWith(_ => { });
 

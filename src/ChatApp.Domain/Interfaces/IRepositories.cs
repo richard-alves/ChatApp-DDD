@@ -5,7 +5,6 @@ namespace ChatApp.Domain.Interfaces;
 public interface IChatRoomRepository
 {
     Task<ChatRoom?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    //Task<ChatRoom?> GetByIdWithMessagesAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<ChatRoom>> GetAllActiveAsync(CancellationToken cancellationToken = default);
     Task AddAsync(ChatRoom chatRoom, CancellationToken cancellationToken = default);
     void Update(ChatRoom chatRoom);

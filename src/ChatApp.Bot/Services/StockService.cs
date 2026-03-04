@@ -15,14 +15,22 @@ public record StockQuote(string Symbol, decimal? Price, string DisplayMessage);
 
 public class StockRecord
 {
-    [Name("Symbol")] public string Symbol { get; set; } = string.Empty;
-    [Name("Date")] public string Date { get; set; } = string.Empty;
-    [Name("Time")] public string Time { get; set; } = string.Empty;
-    [Name("Open")] public string Open { get; set; } = string.Empty;
-    [Name("High")] public string High { get; set; } = string.Empty;
-    [Name("Low")] public string Low { get; set; } = string.Empty;
-    [Name("Close")] public string Close { get; set; } = string.Empty;
-    [Name("Volume")] public string Volume { get; set; } = string.Empty;
+    [Name("Symbol")] 
+    public string Symbol { get; set; } = string.Empty;
+    [Name("Date")] 
+    public string Date { get; set; } = string.Empty;
+    [Name("Time")] 
+    public string Time { get; set; } = string.Empty;
+    [Name("Open")] 
+    public string Open { get; set; } = string.Empty;
+    [Name("High")] 
+    public string High { get; set; } = string.Empty;
+    [Name("Low")] 
+    public string Low { get; set; } = string.Empty;
+    [Name("Close")] 
+    public string Close { get; set; } = string.Empty;
+    [Name("Volume")] 
+    public string Volume { get; set; } = string.Empty;
 }
 
 public class StockService(HttpClient httpClient, ILogger<StockService> logger) : IStockService
