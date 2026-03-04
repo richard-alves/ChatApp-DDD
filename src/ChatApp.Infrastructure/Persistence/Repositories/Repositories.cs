@@ -1,5 +1,6 @@
 using ChatApp.Domain.Entities;
 using ChatApp.Domain.Interfaces;
+using ChatApp.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Infrastructure.Persistence.Repositories;
@@ -8,11 +9,6 @@ public class ChatRoomRepository(AppDbContext context) : IChatRoomRepository
 {
     public async Task<ChatRoom?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await context.ChatRooms.FindAsync([id], cancellationToken);
-
-    //public async Task<ChatRoom?> GetByIdWithMessagesAsync(Guid id, CancellationToken cancellationToken = default)
-    //    => await context.ChatRooms
-    //        .Include(r => r.Messages)
-    //        .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
     public async Task<IEnumerable<ChatRoom>> GetAllActiveAsync(CancellationToken cancellationToken = default)
         => await context.ChatRooms.Where(r => r.IsActive).ToListAsync(cancellationToken);
@@ -35,4 +31,16 @@ public class MessageRepository(AppDbContext context) : IMessageRepository
 
     public async Task AddAsync(Message message, CancellationToken cancellationToken = default)
         => await context.Messages.AddAsync(message, cancellationToken);
+}
+
+public class OutboxMessageRepository(AppDbContext context) : IOutboxMessageRepository
+{
+    public async Task AddAsync(string type, string content, CancellationToken cancellationToken = default)
+    {
+        await context.OutboxMessages.AddAsync(new OutboxMessage
+        {
+            Type = type,
+            Content = content
+        }, cancellationToken);
+    }
 }

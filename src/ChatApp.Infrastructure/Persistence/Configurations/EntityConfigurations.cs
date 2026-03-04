@@ -12,7 +12,6 @@ public class ChatRoomConfiguration : IEntityTypeConfiguration<ChatRoom>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
-        //builder.HasMany(x => x.Messages).WithOne().HasForeignKey(x => x.ChatRoomId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.Name).IsUnique();
     }
 }

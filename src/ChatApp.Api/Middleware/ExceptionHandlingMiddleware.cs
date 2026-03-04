@@ -1,11 +1,12 @@
 using ChatApp.Domain.Exceptions;
 using FluentValidation;
+using System;
 using System.Net;
 using System.Text.Json;
 
 namespace ChatApp.Api.Middleware;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IWebHostEnvironment environment)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -33,7 +34,15 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             logger.LogError(ex, "Unhandled exception");
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = "An unexpected error occurred." }));
+
+            var isDevelopment = environment.IsDevelopment();
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                error = "An unexpected error occurred.",
+                detail = isDevelopment ? ex.Message : null,
+                stackTrace = isDevelopment ? ex.StackTrace : null
+            }));
         }
     }
 }

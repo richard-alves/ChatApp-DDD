@@ -248,7 +248,21 @@
 
     connection.on('ReceiveMessage', (notification) => {
       if (notification.chatRoomId === currentRoom) {
-        appendMessage(notification);
+          document.getElementById('msg-please-wait')?.remove();
+
+          if (notification.messageId !== '00000000-0000-0000-0000-000000000000') {
+              appendMessage(notification);
+          } else {
+              const container = document.getElementById('messages');
+              const div = document.createElement('div');
+              div.id = 'msg-please-wait';
+              div.className = 'message bot';
+              div.innerHTML = `
+                <div class="message-meta">🤖 StockBot</div>
+                <div class="message-bubble">${notification.content}</div>
+            `;
+              container.appendChild(div);
+          }
         scrollToBottom();
       }
     });

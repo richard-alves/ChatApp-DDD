@@ -12,24 +12,11 @@ public class AuthController(IMediator mediator) : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
-        try
-        {
-            var result = await mediator.Send(new RegisterCommand(request.Username, request.Email, request.Password), cancellationToken);
-            if (!result.IsSuccess)
-                return BadRequest(new { error = result.Error });
+        var result = await mediator.Send(new RegisterCommand(request.Username, request.Email, request.Password), cancellationToken);
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
 
-            return Ok(result.Value);
-        }
-        catch (FluentValidation.ValidationException ex)
-        {
-            return BadRequest(new { error = ex.Errors.Select(x=>x.ErrorMessage) });
-
-        }
-        catch (Exception ex) 
-        {
-            return BadRequest(new { error = ex.Message});
-        }
-        
+        return Ok(result.Value);
     }
 
     [HttpPost("login")]
