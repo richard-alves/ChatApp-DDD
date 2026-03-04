@@ -16,6 +16,11 @@ public interface IMessageRepository
     Task AddAsync(Message message, CancellationToken cancellationToken = default);
 }
 
+public interface IOutboxMessageRepository
+{
+    Task AddAsync(string type, string content, CancellationToken cancellationToken = default);
+}
+
 public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

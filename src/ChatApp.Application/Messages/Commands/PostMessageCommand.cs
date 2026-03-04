@@ -6,6 +6,7 @@ using ChatApp.Domain.Interfaces;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace ChatApp.Application.Messages.Commands;
 
@@ -38,7 +39,7 @@ public class PostMessageCommandHandler(
     IChatRoomRepository chatRoomRepository,
     IMessageRepository messageRepository,
     IUnitOfWork unitOfWork,
-    IMessageBroker messageBroker,
+    IOutboxMessageRepository outboxMessageRepository,
     IChatHubNotifier hubNotifier,
     ILogger<PostMessageCommandHandler> logger)
     : IRequestHandler<PostMessageCommand, Result<MessageDto>>
@@ -57,11 +58,29 @@ public class PostMessageCommandHandler(
             var stockCode = request.Content[StockCommandPrefix.Length..].Trim();
             logger.LogInformation("Stock command received for code: {StockCode} in room {ChatRoomId}", stockCode, request.ChatRoomId);
 
-            await messageBroker.PublishAsync(
-                "stock.exchange",
-                "stock.query",
-                new StockQueryMessage(stockCode, request.ChatRoomId),
+            //await messageBroker.PublishAsync(
+            //    "stock.exchange",
+            //    "stock.query",
+            //    new StockQueryMessage(stockCode, request.ChatRoomId),
+            //    cancellationToken);
+
+            await outboxMessageRepository.AddAsync(
+                "StockQuery",
+                JsonConvert.SerializeObject(new StockQueryMessage(stockCode, request.ChatRoomId)),
                 cancellationToken);
+
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var notification = new MessageNotification(
+                Guid.Empty,
+                request.ChatRoomId,
+                $"Fetching quote for {stockCode.ToUpper()}, please wait...",
+                "StockBot",
+                true,
+                DateTime.UtcNow);
+
+            await hubNotifier.NotifyMessageAsync(request.ChatRoomId, notification, cancellationToken);
+
 
             return Result<MessageDto>.Success(new MessageDto(Guid.Empty, request.ChatRoomId, request.Content, request.Username, false, DateTime.UtcNow));
         }

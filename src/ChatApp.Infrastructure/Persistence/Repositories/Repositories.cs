@@ -1,5 +1,6 @@
 using ChatApp.Domain.Entities;
 using ChatApp.Domain.Interfaces;
+using ChatApp.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Infrastructure.Persistence.Repositories;
@@ -30,4 +31,16 @@ public class MessageRepository(AppDbContext context) : IMessageRepository
 
     public async Task AddAsync(Message message, CancellationToken cancellationToken = default)
         => await context.Messages.AddAsync(message, cancellationToken);
+}
+
+public class OutboxMessageRepository(AppDbContext context) : IOutboxMessageRepository
+{
+    public async Task AddAsync(string type, string content, CancellationToken cancellationToken = default)
+    {
+        await context.OutboxMessages.AddAsync(new OutboxMessage
+        {
+            Type = type,
+            Content = content
+        }, cancellationToken);
+    }
 }

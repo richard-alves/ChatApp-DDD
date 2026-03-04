@@ -7,6 +7,7 @@ public class OutboxMessage
     public string Content { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ProcessedAt { get; set; }
+    public DateTime? PublishedAt { get; set; }
     public string? Error { get; set; }
     public int RetryCount { get; set; }
 }

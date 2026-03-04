@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IChatRoomRepository, ChatRoomRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IOutboxMessageRepository, OutboxMessageRepository>();
 
         // Identity
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>

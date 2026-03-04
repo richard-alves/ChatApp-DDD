@@ -29,3 +29,8 @@ secrets.json
 ## Coverage
 coverage/
 TestResults/
+
+## SQLite
+*.db
+*.db-shm
+*.db-wal
