@@ -17,6 +17,7 @@ namespace ChatApp.Bot.Services;
 public class StockBotConsumer(
     IServiceScopeFactory scopeFactory,
     IOptions<RabbitMqSettings> rabbitSettings,
+    IConfiguration configuration,
     ILogger<StockBotConsumer> logger) : BackgroundService
 {
     private const string Exchange = "stock.exchange";
@@ -116,9 +117,10 @@ public class StockBotConsumer(
             var quote = await stockService.GetStockQuoteAsync(queryMessage.StockCode);
             var botMessage = quote?.DisplayMessage ?? $"Could not retrieve quote for {queryMessage.StockCode.ToUpper()}.";
 
+            var apiUrl = configuration["ApiUrl"];
             var http = scope.ServiceProvider.GetRequiredService<HttpClient>();
             await http.PostAsJsonAsync(
-                $"https://localhost:64707/api/chatrooms/{queryMessage.ChatRoomId}/messages/bot",
+                $"{apiUrl}/api/chatrooms/{queryMessage.ChatRoomId}/messages/bot",
                 new { content = botMessage });
 
             _channel?.BasicAck(e.DeliveryTag, false);
