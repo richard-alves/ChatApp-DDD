@@ -1,0 +1,31 @@
+## .NET
+*.user
+*.suo
+.vs/
+bin/
+obj/
+*.nupkg
+*.snupkg
+*.log
+*.cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## IDE
+.idea/
+.vscode/
+*.DS_Store
+
+## Secrets (never commit)
+appsettings.Production.json
+secrets.json
+*.pfx
+*.p12
+
+## Docker
+.docker/
+
+## Coverage
+coverage/
+TestResults/

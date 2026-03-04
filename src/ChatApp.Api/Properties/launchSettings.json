@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "ChatApp.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:64707;http://localhost:64708"
+      //"applicationUrl": "http://localhost:5000"
+    }
+  }
+}

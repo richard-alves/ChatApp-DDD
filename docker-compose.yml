@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: chatapp-sqlserver
+    environment:
+      SA_PASSWORD: "ChatApp@123!"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "ChatApp@123!" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: chatapp-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  chatapp-api:
+    build:
+      context: .
+      dockerfile: src/ChatApp.Api/Dockerfile
+    container_name: chatapp-api
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=ChatAppDb;User Id=sa;Password=ChatApp@123!;TrustServerCertificate=True;
+      - RabbitMq__Host=rabbitmq
+      - JwtSettings__Secret=YOUR_SUPER_SECRET_KEY_MINIMUM_32_CHARS_HERE_CHANGE_IN_PROD
+      - JwtSettings__Issuer=ChatApp
+      - JwtSettings__Audience=ChatAppUsers
+      - AllowedOrigins__0=http://localhost:3000
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  chatapp-bot:
+    build:
+      context: .
+      dockerfile: src/ChatApp.Bot/Dockerfile
+    container_name: chatapp-bot
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=ChatAppDb;User Id=sa;Password=ChatApp@123!;TrustServerCertificate=True;
+      - RabbitMq__Host=rabbitmq
+      - JwtSettings__Secret=YOUR_SUPER_SECRET_KEY_MINIMUM_32_CHARS_HERE_CHANGE_IN_PROD
+      - JwtSettings__Issuer=ChatApp
+      - JwtSettings__Audience=ChatAppUsers
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      chatapp-api:
+        condition: service_started
+
+volumes:
+  sqlserver_data:
+  rabbitmq_data:

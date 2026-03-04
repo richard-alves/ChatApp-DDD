@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatApp</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; }
+    #auth-panel { max-width: 400px; margin: 80px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
+    #auth-panel h2 { margin-bottom: 20px; color: #333; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; color: #555; font-size: 14px; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #007bff; color: white; width: 100%; margin-bottom: 10px; }
+    .btn-secondary { background: #6c757d; color: white; width: 100%; }
+    .btn:hover { opacity: 0.9; }
+    #app { display: none; flex: 1; overflow: hidden; }
+    #sidebar { width: 240px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
+    #sidebar h3 { padding: 15px; background: #1a252f; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+    #rooms-list { flex: 1; overflow-y: auto; }
+    .room-item { padding: 12px 15px; cursor: pointer; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .room-item:hover, .room-item.active { background: #3d5166; }
+    #user-info { padding: 12px 15px; background: #1a252f; font-size: 13px; }
+    #user-info span { color: #adb5bd; }
+    #logout-btn { background: none; border: none; color: #adb5bd; cursor: pointer; float: right; }
+    #chat-area { flex: 1; display: flex; flex-direction: column; }
+    #room-header { padding: 15px 20px; background: white; border-bottom: 1px solid #e9ecef; }
+    #room-header h2 { font-size: 16px; color: #333; }
+    #messages { flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa; }
+    .message { margin-bottom: 12px; max-width: 70%; }
+    .message.own { margin-left: auto; }
+    .message-meta { font-size: 11px; color: #6c757d; margin-bottom: 3px; }
+    .message.own .message-meta { text-align: right; }
+    .message-bubble { padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; }
+    .message.other .message-bubble { background: white; border: 1px solid #e9ecef; color: #333; }
+    .message.own .message-bubble { background: #007bff; color: white; }
+    .message.bot .message-bubble { background: #28a745; color: white; border-radius: 8px; }
+    .message.bot .message-meta { text-align: left; }
+    #input-area { padding: 15px 20px; background: white; border-top: 1px solid #e9ecef; display: flex; gap: 10px; }
+    #message-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; font-size: 14px; outline: none; }
+    #send-btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    #status-bar { padding: 5px 20px; font-size: 12px; background: #e9ecef; color: #6c757d; }
+    .error { color: #dc3545; font-size: 12px; margin-top: 5px; }
+    .tab-btns { display: flex; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 8px; border: 1px solid #ddd; background: white; cursor: pointer; }
+    .tab-btn.active { background: #007bff; color: white; border-color: #007bff; }
+  </style>
+</head>
+<body>
+
+<!-- Auth Panel -->
+<div id="auth-panel">
+  <h2>ChatApp</h2>
+  <div class="tab-btns">
+    <button class="tab-btn active" onclick="showTab('login')">Login</button>
+    <button class="tab-btn" onclick="showTab('register')">Register</button>
+  </div>
+
+  <div id="login-form">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Password">
+    </div>
+    <div class="error" id="login-error"></div>
+    <button class="btn btn-primary" onclick="login()">Login</button>
+  </div>
+
+  <div id="register-form" style="display:none">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="reg-username" placeholder="YourName">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="reg-password" placeholder="Min 6 characters">
+    </div>
+    <div class="error" id="register-error"></div>
+    <button class="btn btn-primary" onclick="register()">Register</button>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <div id="sidebar">
+    <h3>💬 Rooms</h3>
+    <div id="rooms-list"></div>
+    <div id="user-info">
+      <span id="username-display"></span>
+      <button id="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div id="chat-area">
+    <div id="room-header">
+      <h2 id="room-name">Select a room</h2>
+    </div>
+    <div id="messages"></div>
+    <div id="status-bar">Connecting...</div>
+    <div id="input-area">
+      <input type="text" id="message-input" placeholder="Type a message or /stock=aapl.us" onkeypress="handleKey(event)">
+      <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '/api';
+  let token = null;
+  let currentUser = null;
+  let currentRoom = null;
+  let connection = null;
+
+  function showTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='login'?0:1)===i));
+    document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+  }
+
+  async function login() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    document.getElementById('login-error').textContent = '';
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      await startApp(data);
+    } catch(e) {
+      document.getElementById('login-error').textContent = e.message;
+    }
+  }
+
+  async function register() {
+    const username = document.getElementById('reg-username').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+    document.getElementById('register-error').textContent = '';
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      await startApp(data);
+    } catch(e) {
+      document.getElementById('register-error').textContent = e.message;
+    }
+  }
+
+  async function startApp(authData) {
+    token = authData.token;
+    currentUser = authData;
+    document.getElementById('auth-panel').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('username-display').textContent = authData.username;
+    await loadRooms();
+    await connectSignalR();
+  }
+
+  async function loadRooms() {
+    const res = await fetch(`${API}/chatrooms`, { headers: { Authorization: `Bearer ${token}` } });
+    const rooms = await res.json();
+    const list = document.getElementById('rooms-list');
+    list.innerHTML = rooms.map(r =>
+      `<div class="room-item" onclick="selectRoom('${r.id}', '${r.name}')" id="room-${r.id}"># ${r.name}</div>`
+    ).join('');
+    if (rooms.length > 0) selectRoom(rooms[0].id, rooms[0].name);
+  }
+
+  async function selectRoom(roomId, roomName) {
+    if (currentRoom && connection) {
+      await connection.invoke('LeaveRoom', currentRoom);
+    }
+    currentRoom = roomId;
+    document.getElementById('room-name').textContent = `# ${roomName}`;
+    document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active'));
+    const el = document.getElementById(`room-${roomId}`);
+    if (el) el.classList.add('active');
+
+    document.getElementById('messages').innerHTML = '';
+    await loadMessages(roomId);
+
+    if (connection && connection.state === 'Connected') {
+      await connection.invoke('JoinRoom', roomId);
+    }
+  }
+
+  async function loadMessages(roomId) {
+    const res = await fetch(`${API}/chatrooms/${roomId}/messages`, { headers: { Authorization: `Bearer ${token}` } });
+    const messages = await res.json();
+    messages.forEach(m => appendMessage(m));
+    scrollToBottom();
+  }
+
+  function appendMessage(msg) {
+    const container = document.getElementById('messages');
+    const isOwn = msg.userId === currentUser?.userId || msg.username === currentUser?.username;
+    const isBot = msg.isBot;
+    const cls = isBot ? 'bot' : (isOwn ? 'own' : 'other');
+    const time = new Date(msg.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    const div = document.createElement('div');
+    div.className = `message ${cls}`;
+    div.innerHTML = `
+      <div class="message-meta">${isBot ? '🤖 ' : ''}${msg.username} · ${time}</div>
+      <div class="message-bubble">${escapeHtml(msg.content)}</div>
+    `;
+      container.appendChild(div);
+
+      const messages = container.querySelectorAll('.message');
+      if (messages.length > 50)
+          messages[0].remove();
+
+      scrollToBottom();
+  }
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function scrollToBottom() {
+    const m = document.getElementById('messages');
+    m.scrollTop = m.scrollHeight;
+  }
+
+  async function connectSignalR() {
+    connection = new signalR.HubConnectionBuilder()
+      .withUrl(`/hubs/chat?access_token=${token}`)
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('ReceiveMessage', (notification) => {
+      if (notification.chatRoomId === currentRoom) {
+        appendMessage(notification);
+        scrollToBottom();
+      }
+    });
+
+    connection.on('UserJoined', (info) => {
+      document.getElementById('status-bar').textContent = `${info.username} joined`;
+    });
+
+    connection.onreconnecting(() => document.getElementById('status-bar').textContent = 'Reconnecting...');
+    connection.onreconnected(() => {
+      document.getElementById('status-bar').textContent = 'Connected';
+      if (currentRoom) connection.invoke('JoinRoom', currentRoom);
+    });
+
+    try {
+      await connection.start();
+      document.getElementById('status-bar').textContent = 'Connected';
+      if (currentRoom) await connection.invoke('JoinRoom', currentRoom);
+    } catch(e) {
+      document.getElementById('status-bar').textContent = 'Connection failed';
+    }
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    if (!content || !currentRoom) return;
+    input.value = '';
+    try {
+      const res = await fetch(`${API}/chatrooms/${currentRoom}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Failed to send message');
+      }
+    } catch(e) {
+      alert('Failed to send message');
+    }
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter') sendMessage();
+  }
+
+  function logout() {
+    token = null;
+    currentUser = null;
+    currentRoom = null;
+    if (connection) connection.stop();
+    document.getElementById('auth-panel').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+  }
+</script>
+</body>
+</html>
