@@ -1,119 +1,32 @@
-# ChatApp — .NET Chat Application
+# ChatApp
 
-A real-time browser-based chat application built with **Clean Architecture**, **DDD**, **CQRS**, **Outbox Pattern**, and **.NET Identity**. Users can chat in multiple rooms and query live stock prices via a decoupled bot.
-
----
-
-## ✅ Features Implemented
-
-### Mandatory
-- [x] User registration & login (JWT + .NET Identity)
-- [x] Multiple chatrooms (bonus) with real-time messaging via **SignalR**
-- [x] Stock command `/stock=stock_code` dispatched via **RabbitMQ**
-- [x] Decoupled **StockBot** worker service that fetches CSV from stooq.com
-- [x] Bot posts quote message back to chatroom: `"AAPL.US quote is $150.42 per share."`
-- [x] Messages ordered by timestamp — last 50 only
-- [x] Unit tests (Domain + Application + Infrastructure)
-
-### Bonus
-- [x] **Multiple chatrooms** (General, Tech Talk, Random — seeded automatically)
-- [x] **.NET Identity** for authentication
-- [x] **Bot error handling** — graceful messages when stock unavailable
-- [x] **Docker Compose installer** for one-command startup
+A real-time browser-based chat application built with .NET 8, Clean Architecture, DDD, CQRS, and the Outbox Pattern.
 
 ---
 
-## Architecture
+## Getting Started
 
-```
-ChatApp/
-├── src/
-│   ├── ChatApp.Domain/           # Entities, Value Objects, Domain Events, Interfaces
-│   ├── ChatApp.Application/      # CQRS Commands/Queries, MediatR, FluentValidation
-│   ├── ChatApp.Infrastructure/   # EF Core, RabbitMQ, Outbox, Identity, JWT
-│   ├── ChatApp.Api/              # ASP.NET Core 8 REST API + SignalR Hub
-│   └── ChatApp.Bot/              # Worker Service — RabbitMQ consumer + Stock API
-├── tests/
-│   └── ChatApp.Tests/            # xUnit + Moq + FluentAssertions
-└── frontend/
-    └── index.html                # Simple browser client
-```
+### Prerequisites
+- Visual Studio 2022 or later
+- Docker Desktop
 
-### Key Patterns
-| Pattern | Where Used |
-|---------|-----------|
-| **Clean Architecture** | Domain → Application → Infrastructure → API |
-| **DDD Aggregates** | `ChatRoom` aggregate with `Message` child entities |
-| **CQRS** | Separate Commands/Queries via MediatR |
-| **Outbox Pattern** | Domain events serialized to `OutboxMessages` table in same transaction |
-| **Repository Pattern** | `IChatRoomRepository`, `IMessageRepository` |
-| **Pipeline Behaviors** | `ValidationBehavior<T>` for automatic FluentValidation |
-| **Result Pattern** | `Result<T>` for explicit success/failure without exceptions |
-
----
-
-## Prerequisites
-
-- .NET 8 SDK
-- Docker & Docker Compose (or: SQL Server + RabbitMQ locally)
-
----
-
-## 🚀 Quick Start (Docker)
-
+### 1. Start RabbitMQ
 ```bash
-# 1. Clone / unzip the project
-cd ChatApp
-
-# 2. Start all dependencies + services
-docker-compose up -d
-
-# 3. Open frontend in browser
-open frontend/index.html
-# Or serve it: npx serve frontend/
+docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.13-management
 ```
 
-The API will be at `http://localhost:5000`  
-Swagger UI: `http://localhost:5000/swagger`  
-RabbitMQ Management: `http://localhost:15672` (guest/guest)
+### 2. Configure Multiple Startup Projects
+- Right click the Solution in Solution Explorer
+- Properties → Common Properties → Startup Project
+- Select **Multiple Startup Projects**
+- Set `ChatApp.Api` → **Start**
+- Set `ChatApp.Bot` → **Start**
+- Click OK
 
----
+### 3. Run
+Press **F5** — both API and Bot will start automatically.
 
-## 🏃 Manual Start (without Docker)
-
-### 1. Start dependencies
-```bash
-# SQL Server (Docker)
-docker run -e SA_PASSWORD=ChatApp@123! -e ACCEPT_EULA=Y -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
-
-# RabbitMQ (Docker)
-docker run -p 5672:5672 -p 15672:15672 -d rabbitmq:3.13-management
-```
-
-### 2. Update connection strings
-Edit `src/ChatApp.Api/appsettings.json` and `src/ChatApp.Bot/appsettings.json`:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=ChatAppDb;User Id=sa;Password=ChatApp@123!;TrustServerCertificate=True;"
-  }
-}
-```
-
-### 3. Run the API (auto-migrates DB)
-```bash
-cd src/ChatApp.Api
-dotnet run
-```
-
-### 4. Run the Bot
-```bash
-cd src/ChatApp.Bot
-dotnet run
-```
-
-### 5. Open frontend
-Open `frontend/index.html` in your browser.
+The browser will open with the chat application ready to use.
 
 ---
 
@@ -126,24 +39,81 @@ dotnet test
 
 ---
 
-## Using the App
+## Mandatory Features
 
-1. Open `frontend/index.html` in **two browser windows**
-2. **Register** two different users (or login with existing)
-3. Both users join the same room automatically
-4. Send messages — they appear in real-time
-5. Try the stock command: `/stock=aapl.us`
-   - The message is sent to RabbitMQ (NOT saved to DB)
-   - StockBot fetches the CSV, parses the price, posts: `"AAPL.US quote is $X.XX per share."`
+- [x] Registered users can log in and talk in a chatroom
+- [x] Users can post stock commands in the format `/stock=stock_code`
+- [x] Decoupled bot that calls the stooq.com API and parses the CSV response
+- [x] Bot sends the stock quote back to the chatroom via RabbitMQ
+- [x] Messages ordered by timestamp — last 50 only
+- [x] Unit tests
+
+## Bonus Features
+
+- [x] Multiple chatrooms (General, Tech Talk, Random — seeded automatically)
+- [x] .NET Identity for user authentication
+- [x] Bot error handling — graceful messages when stock is unavailable or an exception occurs
 
 ---
 
-## Security Notes
+## Architecture
 
-- JWT secret must be changed in production (environment variable / secrets manager)
-- Connection strings should use environment variables in production
-- The `appsettings.json` secrets are for development only
-- Use `dotnet user-secrets` locally: `dotnet user-secrets set "JwtSettings:Secret" "your-secret"`
+```
+ChatApp/
+├── src/
+│   ├── ChatApp.Domain/           # Entities, Interfaces, Exceptions
+│   ├── ChatApp.Application/      # CQRS Commands/Queries, Handlers, Validators
+│   ├── ChatApp.Infrastructure/   # EF Core, RabbitMQ, Outbox, Identity, JWT
+│   ├── ChatApp.Api/              # ASP.NET Core 8 REST API + SignalR Hub
+│   └── ChatApp.Bot/              # Worker Service — RabbitMQ consumer + Stock API
+├── tests/
+│   └── ChatApp.Tests/            # xUnit + Moq + FluentAssertions
+└── frontend/
+    └── index.html                # Simple browser client
+```
+
+### Patterns and Practices
+
+| Pattern | Where |
+|---------|-------|
+| Clean Architecture | Domain → Application → Infrastructure → API |
+| DDD | `ChatRoom` and `Message` entities with business rules |
+| CQRS | Separate Commands and Queries via MediatR |
+| Outbox Pattern | Stock commands saved to `OutboxMessages` table before publishing to RabbitMQ |
+| Repository Pattern | `IChatRoomRepository`, `IMessageRepository`, `IOutboxRepository` |
+| Pipeline Behavior | `ValidationBehavior<T>` runs FluentValidation before every handler |
+| Result Pattern | `Result<T>` for explicit success/failure without exceptions |
+
+---
+
+## Stock Command Flow
+
+```
+User types /stock=aapl.us
+        ↓
+API saves to OutboxMessages table
+        ↓
+OutboxProcessor (every 3s) reads and publishes to RabbitMQ
+        ↓
+StockBot consumes the message
+        ↓
+Fetches CSV from stooq.com and parses the price
+        ↓
+Calls API with the result
+        ↓
+API saves the bot message and notifies via SignalR
+        ↓
+All users in the room see: "AAPL.US quote is $152.50 per share."
+```
+
+> The stock command is **not saved** to the database — only the bot's response is.
+
+---
+
+## Prerequisites
+
+- .NET 8 SDK
+- RabbitMQ (via Docker)
 
 ---
 
@@ -157,14 +127,4 @@ dotnet test
 | POST | `/api/chatrooms` | JWT | Create room |
 | GET | `/api/chatrooms/{id}/messages` | JWT | Get last 50 messages |
 | POST | `/api/chatrooms/{id}/messages` | JWT | Post message |
-| WS | `/hubs/chat?access_token=...` | JWT | SignalR hub |
-
----
-
-## SignalR Hub Events
-
-| Client → Server | Server → Client |
-|----------------|----------------|
-| `JoinRoom(roomId)` | `ReceiveMessage(notification)` |
-| `LeaveRoom(roomId)` | `UserJoined(info)` |
-| | `UserLeft(info)` |
+| POST | `/api/chatrooms/{id}/messages/bot` | None | Bot response endpoint |
